@@ -40,24 +40,34 @@ RUN apt-get update && \
 # Set timezone
 #RUN timedatectl set-timezone Europe/Rome
 
+# Replace existing default Apache configuration
+ADD apache_default.conf /etc/apache${APACHE_MAJOR}/sites-enabled/000-default.conf
+
 # Enable apache mods.
 RUN a2enmod php${PHP_VERSION}
-RUN a2enmod proxy, proxy_http
+RUN a2enmod proxy
+RUN a2enmod proxy_http
 RUN a2enmod rewrite
 
 # Update the PHP.ini file, enable <? ?> tags and quieten logging.
 RUN sed -i "s/short_open_tag = Off/short_open_tag = On/" /etc/php/${PHP_VERSION}/apache${APACHE_MAJOR}/php.ini
 RUN sed -i "s/error_reporting = .*$/error_reporting = E_ALL | E_ERROR | E_WARNING | E_PARSE/" /etc/php/${PHP_VERSION}/apache${APACHE_MAJOR}/php.ini
-RUN sed -i "s/display_errors = .*$/display_errors = On" /etc/php/${PHP_VERSION}/apache${APACHE_MAJOR}/php.ini
+RUN sed -i "s/display_errors = .*$/display_errors = On/" /etc/php/${PHP_VERSION}/apache${APACHE_MAJOR}/php.ini
+
+# Add proxy enabled apache configuration with the config we created to enable communication with Geoserver
+# ADD apache_gs_proxy.conf /etc/apache${APACHE_MAJOR}/sites-available/operandum-gs.conf
+
+# Enable Geoserver proxy configuration
+# RUN a2ensite operandum-gs
+
+# Delete default document root folder
+RUN rm -f /var/www/html
 
 # Expose apache.
 EXPOSE 80
 
 # Copy this repo into place.
-ADD www /var/www
-
-# Update the default apache site with the config we created.
-ADD apache_gs_proxy.conf /etc/apache${APACHE_MAJOR}/sites-enabled/000-default.conf
+# ADD www /var/www # Commented since when mounting the www directory host content of www directory overwrites the contents of container's folder
 
 # By default start up apache in the foreground, override with /bin/bash for interactive.
 CMD /usr/sbin/apache2ctl -D FOREGROUND
